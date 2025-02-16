@@ -29,6 +29,5 @@ cargo ndk \
     -t x86_64 \
     --output-dir "target/android" \
     build --release \
-    # --features "vendored-openssl"
 
 echo "Android build complete!"

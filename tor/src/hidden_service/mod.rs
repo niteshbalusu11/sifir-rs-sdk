@@ -1,25 +1,18 @@
 use crate::tcp_stream::DataObserver;
 use crate::TorErrors;
 use crate::RUNTIME;
+use base64::engine::general_purpose;
+use base64::Engine;
 use logger::log::*;
-use std::borrow::{Borrow, BorrowMut};
-use std::io::{Read, Write};
-use std::net::Shutdown;
-use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use tokio::io::{
-    AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, ReadBuf,
-};
-use tokio::net::TcpStream;
-use tokio::net::{TcpListener, ToSocketAddrs};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
 
-use httparse::{Request, Response, EMPTY_HEADER};
+use httparse::Request;
 use serde_json::json;
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use tokio::sync::{Mutex, RwLock};
-use tokio::time::{timeout, Duration};
-use tokio_compat_02::FutureExt;
+use tokio::sync::RwLock;
 
 pub type HiddenServiceDataHandler = Box<dyn DataObserver + Send + Sync + 'static>;
 
@@ -123,7 +116,9 @@ impl HiddenServiceHandler {
                             let start_index = status.unwrap();
                             let end_index = position;
                             trace!("<- parse body from {} to {}", start_index, end_index);
-                            base64::encode(&buffer[start_index..end_index])
+                            let mut buf = String::new();
+                            general_purpose::STANDARD.encode_string(&buffer[start_index..end_index], &mut buf);
+                            buf
                         } else {
                             trace!("<- parse body non complete request");
                             String::from("")

@@ -22,27 +22,27 @@ mkdir -p target/macos
 # Build for Apple Silicon
 echo "Building for Apple Silicon (arm64)..."
 cargo build --release \
+    --manifest-path="./sifir-ios/Cargo.toml" \
     --target aarch64-apple-darwin \
-    --features "vendored-openssl" \
     --target-dir "target/macos"
 
 # Build for Intel
 echo "Building for Intel (x86_64)..."
 cargo build --release \
+    --manifest-path="./sifir-ios/Cargo.toml" \
     --target x86_64-apple-darwin \
-    --features "vendored-openssl" \
     --target-dir "target/macos"
 
 # Create universal binary (optional)
 echo "Creating universal binary..."
-if [ -f "target/macos/aarch64-apple-darwin/release/libtor.dylib" ] && \
-   [ -f "target/macos/x86_64-apple-darwin/release/libtor.dylib" ]; then
+if [ -f "target/macos/aarch64-apple-darwin/release/libsifir_ios.a" ] && \
+   [ -f "target/macos/x86_64-apple-darwin/release/libsifir_ios.a" ]; then
     mkdir -p target/macos/universal
     lipo -create \
-        target/macos/aarch64-apple-darwin/release/libtor.dylib \
-        target/macos/x86_64-apple-darwin/release/libtor.dylib \
-        -output target/macos/universal/libtor.dylib
-    echo "Universal binary created at target/macos/universal/libtor.dylib"
+        target/macos/aarch64-apple-darwin/release/libsifir_ios.a \
+        target/macos/x86_64-apple-darwin/release/libsifir_ios.a \
+        -output target/macos/universal/libsifir_ios.a
+    echo "Universal binary created at target/macos/universal/libsifir_ios.a"
 else
     echo "Warning: Could not create universal binary. One or both architecture builds are missing."
 fi

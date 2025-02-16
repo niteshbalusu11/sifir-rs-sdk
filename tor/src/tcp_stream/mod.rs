@@ -1,23 +1,18 @@
 use crate::TorErrors;
 use crate::RUNTIME;
 use socks::Socks5Stream;
-use std::borrow::{Borrow, BorrowMut};
 use std::io::BufRead;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::net::Shutdown;
-use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, BufReader, ReadBuf};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::TcpStream;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tokio::time::{timeout, Duration};
-use torut::control::TorErrorKind;
 
 type TcpStreamDataHandler = Box<dyn DataObserver + Send + Sync + 'static>;
 
 pub struct TcpSocksStream {
-    target: String,
-    socks_proxy: String,
     stream: Socks5Stream,
     data_handler: Arc<RwLock<Option<TcpStreamDataHandler>>>,
     read_buffer: Arc<RwLock<BufReader<TcpStream>>>,
@@ -34,8 +29,6 @@ impl TcpSocksStream {
         let socks_stream = Socks5Stream::connect(socks_proxy.as_str(), target.as_str())?;
         let tcpstream = socks_stream.get_ref().try_clone()?;
         Ok(TcpSocksStream {
-            target,
-            socks_proxy,
             stream: socks_stream,
             read_buffer: Arc::new(RwLock::new(BufReader::new(TcpStream::from_std(tcpstream)?))),
             data_handler: Arc::new(RwLock::new(None)),
@@ -79,7 +72,7 @@ impl TcpSocksStream {
             .stream
             .get_ref()
             .try_clone()
-            .map_err(|e| TorErrors::TcpStreamError(String::from("Error cloning tcp stream")))?;
+            .map_err(|_| TorErrors::TcpStreamError(String::from("Error cloning tcp stream")))?;
         let cb_clone = self.data_handler.clone();
 
         (*RUNTIME).lock().unwrap().spawn(async move {

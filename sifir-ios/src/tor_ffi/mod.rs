@@ -1,12 +1,13 @@
+use base64::engine::general_purpose;
+use base64::Engine;
 use libc::{c_char, c_void};
 use logger;
 use serde_json::json;
 use std::ffi::{CStr, CString};
-use std::ops::{Deref, DerefMut};
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::catch_unwind;
 use std::time::Duration;
 use tor::{
-    hidden_service::{HiddenServiceDataHandler, HiddenServiceHandler},
+    hidden_service::HiddenServiceHandler,
     tcp_stream::{DataObserver, TcpSocksStream},
     OwnedTorService, TorHiddenService, TorHiddenServiceParam, TorServiceParam,
 };
@@ -182,7 +183,7 @@ pub extern "C" fn tcp_stream_send_msg(
     assert!(!stream_ptr.is_null());
     assert!(!msg.is_null());
     match {
-        let mut stream = unsafe { &mut *stream_ptr };
+        let stream = unsafe { &mut *stream_ptr };
         let msg_str: String = unsafe { CStr::from_ptr(msg) }
             .to_str()
             .expect("Could not get str from proxy")
@@ -221,11 +222,7 @@ pub extern "C" fn create_hidden_service(
             } else {
                 // Return on base64 parse error
                 let mut decoded_buff: [u8; 64] = [0; 64];
-                match base64::decode_config_slice(
-                    secret_key_str,
-                    base64::STANDARD,
-                    &mut decoded_buff,
-                ) {
+                match general_purpose::STANDARD.decode_slice(secret_key_str, &mut decoded_buff) {
                     Ok(_) => Some(decoded_buff),
                     Err(e) => {
                         return Box::into_raw(Box::new(BoxedResult {
@@ -250,7 +247,7 @@ pub extern "C" fn create_hidden_service(
             onion_url,
             secret_key,
         }) => {
-            let json_payload = json!({ "onion_url": onion_url.to_string(), "secret_key": base64::encode(secret_key) });
+            let json_payload = json!({ "onion_url": onion_url.to_string(), "secret_key": general_purpose::STANDARD.encode(secret_key) });
             Box::into_raw(Box::new(BoxedResult {
                 result: Some(Box::new(
                     CString::new(json_payload.to_string()).unwrap().into_raw(),
@@ -274,12 +271,13 @@ pub extern "C" fn delete_hidden_service(
     owned_client: *mut OwnedTorService,
     onion: *const c_char,
 ) -> *mut ResultMessage {
-
     assert!(!owned_client.is_null());
     assert!(!onion.is_null());
 
     let owned = unsafe { &mut *owned_client };
-    let onion_str = unsafe { CStr::from_ptr(onion) }.to_str().expect("Could not obtain str from onion");
+    let onion_str = unsafe { CStr::from_ptr(onion) }
+        .to_str()
+        .expect("Could not obtain str from onion");
 
     match owned.delete_hidden_service(String::from(onion_str)) {
         Ok(_) => Box::into_raw(Box::new(ResultMessage::Success)),

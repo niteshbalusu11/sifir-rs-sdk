@@ -2,7 +2,7 @@ pub mod hidden_service;
 pub mod tcp_stream;
 use futures::Future;
 use lazy_static::*;
-use libtor::{Tor, TorAddress, TorBool, TorFlag};
+use libtor::{Tor, TorAddress, TorFlag};
 use logger::log::*;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -109,7 +109,7 @@ trait TorControlApi {
         &mut self,
         timeout_ms: Option<u64>,
     ) -> Pin<Box<dyn Future<Output = Result<bool, TorErrors>> + '_>>;
-    fn shutdown(self);
+    //fn shutdown(self);
     fn get_status(
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<OwnedTorServiceBootstrapPhase, TorErrors>> + '_>>;
@@ -217,7 +217,7 @@ impl TryFrom<TorServiceParam> for TorService {
                     info!("success with config port {}!", control_port);
                     is_ready = true;
                 }
-                Err(e) => {
+                Err(_) => {
                     try_times += 1;
                     if try_times > 10 {
                         return Err(TorErrors::BootStrapError(String::from(
@@ -239,7 +239,7 @@ impl TryFrom<TorServiceParam> for TorService {
 }
 /// Async handler injected into Torut to recieve Tor daemon async events
 /// Right now does nothing but is needed for AuthenticatedConnection from Torut to function correctly
-fn handler(_: AsyncEvent<'static>) -> Pin<Box<dyn Future<Output = Result<(), ConnError>> + '_>> {
+fn handler(_: AsyncEvent<'static>) -> Pin<Box<dyn Future<Output = Result<(), ConnError>>>> {
     Box::pin(async move { Ok(()) })
 }
 
@@ -413,7 +413,7 @@ impl OwnedTorService {
                 "Error shutdown take handle",
             )))?
             .join()
-            .map_err(|e| TorErrors::BootStrapError(String::from("Error joining on shutdown")))?;
+            .map_err(|_| TorErrors::BootStrapError(String::from("Error joining on shutdown")))?;
         Ok(())
     }
 }
@@ -446,7 +446,7 @@ where
             )
             .compat()
             .await
-            .map_err(|e| TorErrors::BootStrapError(String::from("Timeout waiting for boostrap")))?
+            .map_err(|_| TorErrors::BootStrapError(String::from("Timeout waiting for boostrap")))?
         }
         .compat();
         Box::pin(future)
@@ -475,17 +475,15 @@ where
     }
     // dropping the control connection after having taken ownership of the node will cause the node
     // to shutdown
-    fn shutdown(self) {}
+    //fn shutdown(self) {}
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     use serial_test::serial;
-    use socks::{Socks5Datagram, ToTargetAddr};
-    use std::borrow::Borrow;
     use std::convert::TryInto;
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, ToSocketAddrs};
+    use std::io::Write;
+    use std::net::TcpListener;
 
     #[test]
     #[serial(tor)]
@@ -623,7 +621,7 @@ mod tests {
         assert!(service_key.onion_url.to_string().contains(".onion"));
 
         // Spawn a lsner to our request and respond with 200
-        let handle = (*RUNTIME).lock().unwrap().spawn(async {
+        let _handle = (*RUNTIME).lock().unwrap().spawn(async {
             let listener = TcpListener::bind("127.0.0.1:20000").unwrap();
             for stream in listener.incoming() {
                 let mut stream = stream.unwrap();

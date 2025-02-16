@@ -11,3 +11,4 @@ sifir-ios/outputs/**
 
 # direnv
 .direnv
+target
