@@ -1,6 +1,6 @@
 pub mod hidden_service;
 pub mod tcp_stream;
-use futures::{Future, TryStreamExt};
+use futures::Future;
 use lazy_static::*;
 use libtor::{Tor, TorAddress, TorBool, TorFlag};
 use logger::log::*;
@@ -9,9 +9,7 @@ use std::cell::RefCell;
 use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::io;
-use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::net::{TcpListener, ToSocketAddrs};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
@@ -365,10 +363,7 @@ impl OwnedTorService {
             .compat(),
         )
     }
-    pub fn delete_hidden_service(
-        &mut self,
-        onion: String,
-    ) -> Result<(), TorErrors> {
+    pub fn delete_hidden_service(&mut self, onion: String) -> Result<(), TorErrors> {
         (*RUNTIME).lock().unwrap().block_on(
             async {
                 let mut _ctl = self._ctl.borrow_mut();
@@ -377,8 +372,8 @@ impl OwnedTorService {
                     .ok_or(TorErrors::BootStrapError(String::from("Error mut lock")))?;
 
                 ctl.del_onion(&onion)
-                .await
-                .map_err(TorErrors::ControlConnectionError)?;
+                    .await
+                    .map_err(TorErrors::ControlConnectionError)?;
 
                 info!("Hidden serviec deleted !");
                 Ok(())

@@ -14,7 +14,7 @@ impl Logger {
         {
             logger::init_once(
                 android_logger::Config::default()
-                    .with_min_level(log::Level::Debug)
+                    .with_max_level(log::LevelFilter::Debug)
                     .with_tag("sifir-rs-sdk"),
             );
             info!("Android Logger init!");

@@ -6,3 +6,8 @@
 **/**/.idea/*
 sifir-android/outputs/**
 sifir-ios/outputs/**
+
+.DS_Store
+
+# direnv
+.direnv
